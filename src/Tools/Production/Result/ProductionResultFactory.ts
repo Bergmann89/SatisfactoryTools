@@ -16,10 +16,10 @@ export class ProductionResultFactory
 
 	public create(request: IProductionDataApiRequest, response: IProductionDataApiResponse, data: IJsonSchema): ProductionResult
 	{
-		return new ProductionResult(request, ProductionResultFactory.createGraph(response, data), data);
+		return new ProductionResult(request, ProductionResultFactory.createGraph(request, response, data), data);
 	}
 
-	private static createGraph(response: IProductionDataApiResponse, data: IJsonSchema): Graph
+	private static createGraph(request: IProductionDataApiRequest, response: IProductionDataApiResponse, data: IJsonSchema): Graph
 	{
 		const graph = new Graph;
 
@@ -83,6 +83,7 @@ export class ProductionResultFactory
 			}
 		}
 
+		graph.applyCompleted(request.completed || []);
 		graph.generateEdges();
 
 		return graph;

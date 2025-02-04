@@ -112,7 +112,9 @@ export class VisualizationComponentController implements IController
 		const edges = new DataSet<IVisEdge>();
 
 		for (const node of result.graph.nodes) {
-			nodes.add(node.getVisNode());
+			if (node.connectedEdges.length > 0) {
+				nodes.add(node.getVisNode());
+			}
 		}
 
 		for (const edge of result.graph.edges) {

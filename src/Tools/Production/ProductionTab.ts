@@ -6,7 +6,7 @@ import axios from 'axios';
 import {Strings} from '@src/Utils/Strings';
 import {IItemSchema} from '@src/Schema/IItemSchema';
 import {Callbacks} from '@src/Utils/Callbacks';
-import {IProductionData, IProductionDataApiRequest, IProductionDataRequestInput, IProductionDataRequestItem} from '@src/Tools/Production/IProductionData';
+import {IProductionData, IProductionDataApiRequest, IProductionDataRequestCompleted, IProductionDataRequestInput, IProductionDataRequestItem} from '@src/Tools/Production/IProductionData';
 import {ResultStatus} from '@src/Tools/Production/ResultStatus';
 import {Solver} from '@src/Solver/Solver';
 import {ProductionResult} from '@src/Tools/Production/Result/ProductionResult';
@@ -138,7 +138,10 @@ export class ProductionTab
 			}
 			apiRequest.blockedRecipes = blockedRecipes;
 
+			const completed = apiRequest.completed;
+
 			delete apiRequest.blockedMachines;
+			delete apiRequest.completed;
 
 			Solver.solveProduction(apiRequest, (result) => {
 				const res = () => {
@@ -157,6 +160,8 @@ export class ProductionTab
 						this.resultStatus = ResultStatus.NO_RESULT;
 						return;
 					}
+
+					apiRequest.completed = completed;
 
 					const factory = new ProductionResultFactory;
 					this.resultNew = factory.create(apiRequest, result, DataProvider.get());
@@ -196,6 +201,7 @@ export class ProductionTab
 				sinkableResources: [],
 				production: [],
 				input: [],
+				completed: [],
 				resourceMax: angular.copy(Data.resourceAmounts),
 				resourceWeight: angular.copy(Data.resourceWeights),
 			},
@@ -335,6 +341,44 @@ export class ProductionTab
 		const index = this.data.request.input.indexOf(item);
 		if (index in this.data.request.input) {
 			this.data.request.input.splice(index, 1);
+		}
+	}
+
+	public addEmptyCompleted(): void
+	{
+		this.addCompletedItem({
+			recipe: null,
+			amount: 10,
+		});
+	}
+
+	public addCompletedItem(item: IProductionDataRequestCompleted): void
+	{
+		this.data.request.completed = this.data.request.completed || [];
+		this.data.request.completed.push(item);
+	}
+
+	public cloneCompleted(item: IProductionDataRequestCompleted): void
+	{
+		this.data.request.completed = this.data.request.completed || [];
+		this.data.request.completed.push({
+			recipe: item.recipe,
+			amount: item.amount,
+		});
+	}
+
+	public clearCompleted(): void
+	{
+		this.data.request.completed = [];
+		this.addEmptyCompleted();
+	}
+
+	public removeCompleted(item: IProductionDataRequestCompleted): void
+	{
+		this.data.request.completed = this.data.request.completed || [];
+		const index = this.data.request.completed.indexOf(item);
+		if (index in this.data.request.completed) {
+			this.data.request.completed.splice(index, 1);
 		}
 	}
 
