@@ -10,8 +10,12 @@ export class GraphEdge
 
 	public constructor(public readonly from: GraphNode, public readonly to: GraphNode, public readonly itemAmount: ItemAmount)
 	{
-		from.connectedEdges.push(this);
-		to.connectedEdges.push(this);
+		if (this.to === this.from) {
+			this.to.connectedEdges.push(this);
+		} else {
+			this.from.connectedEdges.push(this);
+			this.to.connectedEdges.push(this);
+		}
 	}
 
 	public getText(): string {
@@ -24,6 +28,10 @@ export class GraphEdge
 		const extra = `\namount=${this.itemAmount.amount}\nconsumed=${this.itemAmount.consumed}\nlimit=${this.itemAmount.limit}`
 
 		return model.getItem(this.itemAmount.item).prototype.name + '\n' + amountText + ' / min' + extra;
+	}
+
+	public isLoop(): boolean {
+		return this.to.hasOutputTo(this.from);
 	}
 
 }

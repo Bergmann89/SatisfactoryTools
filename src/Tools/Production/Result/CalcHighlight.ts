@@ -109,7 +109,7 @@ export class CalcHighlight extends CalcCompleted {
 
 	private setNodeLimit(node: RecipeNode, limit: number): void {
 		const diff = limit - (node.limit || 0);
-		if (Numbers.round(diff) <= 0) {
+		if (Numbers.floor(diff) <= 0) {
 			return;
 		}
 

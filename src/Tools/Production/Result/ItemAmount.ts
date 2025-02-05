@@ -16,7 +16,7 @@ export class ItemAmount
 
 		this.consumed = Numbers.round(this.consumed + maxDiff);
 
-		return Numbers.round(diff - maxDiff);
+		return maxDiff;
 	}
 
 	public increaseLimit(diff: number): number {
@@ -25,7 +25,7 @@ export class ItemAmount
 
 		this.limit = Numbers.round(this.limit || 0 + maxDiff);
 
-		return Numbers.round(diff - maxDiff);
+		return maxDiff;
 	}
 
 	public getConsumed(): number {

@@ -76,9 +76,11 @@ export class RecipeNode extends GraphNode
 			title.push('<b>OUT:</b> ' + Strings.formatNumber(product.maxAmount) + ' / min - ' + product.resource.name);
 		}
 
+		title.push(`id=${this.id}`);
 		title.push(`limit=${this.limit}`);
 		title.push(`completed=${this.completed}`);
 		title.push(`highlighted=${this.highlighted}`);
+		title.push(`recipe=${this.recipeData.recipe.className}`);
 
 		return title.join('<br>');
 	}

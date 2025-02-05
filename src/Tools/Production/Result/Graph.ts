@@ -68,7 +68,7 @@ export class Graph
 						if (input.resource === output.resource && input.amount < input.maxAmount) {
 							const diff = Numbers.round(Math.min(input.maxAmount - input.amount, output.amount));
 
-							if (Numbers.round(diff) <= 0) {
+							if (diff <= 0) {
 								continue;
 							}
 

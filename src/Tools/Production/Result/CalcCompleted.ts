@@ -6,6 +6,8 @@ import { RecipeNode } from './Nodes/RecipeNode';
 import { SinkNode } from './Nodes/SinkNode';
 
 export class CalcCompleted {
+	private indent: number = 0;
+
 	public constructor(protected readonly graph: Graph) { }
 
 	public update() {
@@ -64,15 +66,17 @@ export class CalcCompleted {
 			let total = 0;
 
 			for (const edge of node.getEdgesOut(output.resource.className)) {
-				consumed += !edge.to.isAvailable()
-								|| edge.to.hasOutputTo(edge.from)
-					? edge.itemAmount.getAmount()
-					: edge.itemAmount.consumed;
-				total += edge.itemAmount.getAmount();
+				if (!edge.to.isAvailable()) {
+					consumed += edge.itemAmount.getAmount();
+					total += edge.itemAmount.getAmount();
+				} else if (!edge.isLoop()) {
+					consumed += edge.itemAmount.consumed;
+					total += edge.itemAmount.getAmount();
+				}
 			}
 
 			return total === 0
-				? 0.0
+				? 1.0
 				: consumed / total;
 		});
 		const outputUsed = Math.min(...outputsUsed);
@@ -87,11 +91,13 @@ export class CalcCompleted {
 
 	private setNodeCompleted(node: RecipeNode, completed: number) {
 		const diff = completed - node.completed;
-		if (Numbers.round(diff) <= 0) {
+
+		const indent = '   |'.repeat(this.indent)
+		console.log(`${indent}setNodeCompleted(node=${node.id}, recipe=${node.recipeData.recipe.className}, completed=${completed}, diff=${diff})`);
+
+		if (Numbers.floor(diff) <= 0) {
 			return;
 		}
-
-		console.log(`setNodeCompleted(node=${node.id}, recipe=${node.recipeData.recipe.className}, completed=${completed}, diff=${diff})`);
 
 		node.completed = completed;
 		const multiplier = node.getMultiplier(diff);
@@ -102,40 +108,44 @@ export class CalcCompleted {
 				continue;
 			}
 
-			let inputAmount = ingredient.amount * multiplier;
+			const edges = node.getEdgesIn(input.resource.className);
+			const inputAmount = ingredient.amount * multiplier;
+			const totalAmount = edges
+				.map((edge) => edge.from.isAvailable() && !edge.isLoop()
+					? edge.itemAmount.getAvailable()
+					: 0.0)
+				.reduce((acc, sum) => acc + sum, 0);
 
-			console.log(`    Reduce ingredient (inputAmount=${inputAmount}, amount=${ingredient.amount}, multiplier=${multiplier})`);
+			console.log(`${indent}  Reduce ingredient (node=${node.id}, item=${ingredient.item}, ` +
+				`inputAmount=${inputAmount}, totalAmount=${totalAmount}, amount=${ingredient.amount}, multiplier=${multiplier})`);
 
-			for (const edge of node.getEdgesIn(input.resource.className)) {
-				if (   !edge.from.isAvailable()
-					||  edge.to.hasOutputTo(edge.from)) {
-					continue;
-				}
-
-				inputAmount -= edge.itemAmount.increaseConsumed(inputAmount);
-
-				if (edge.from instanceof RecipeNode) {
-					this.updateNodeCompletion(edge.from);
-				}
-
-				if (Numbers.round(inputAmount) <= 0) {
-					break;
-				}
+			if (totalAmount <= 0) {
+				continue;
 			}
 
-			for (const edge of node.getEdgesIn(input.resource.className)) {
-				if (edge.from.isAvailable()) {
+			for (const edge of edges) {
+				if (!edge.from.isAvailable() || edge.isLoop()) {
 					continue;
 				}
 
-				inputAmount -= inputAmount - edge.itemAmount.increaseConsumed(inputAmount);
+				const edgeAmount = edge.itemAmount.getAmount();
+				const ratio = edgeAmount / totalAmount;
+				const relativeEdgeAmount = ratio * inputAmount;
+				const consumed = edge.itemAmount.increaseConsumed(relativeEdgeAmount);
 
-				if (edge.from instanceof RecipeNode) {
+				console.log(`${indent}    Consumed (node=${node.id}, other=${edge.from.id}, edgeAmount=${edgeAmount}, ratio=${ratio}, relativeEdgeAmount=${relativeEdgeAmount}, consumed=${consumed})`);
+			}
+
+			console.log(`${indent}  Update dependencies (node=${node.id})`);
+
+			for (const edge of edges) {
+				if (	edge.from.isAvailable()
+					&&  edge.to !== edge.from
+					&& 	edge.from instanceof RecipeNode)
+				{
+					this.indent += 1;
 					this.updateNodeCompletion(edge.from);
-				}
-
-				if (Numbers.round(inputAmount) <= 0) {
-					break;
+					this.indent -= 1;
 				}
 			}
 		}
