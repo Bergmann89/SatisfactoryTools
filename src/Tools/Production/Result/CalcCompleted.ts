@@ -121,16 +121,16 @@ export class CalcCompleted {
 
 			const edges = node.getEdgesIn(input.resource.className);
 			const inputAmount = ingredient.amount * multiplier;
-			const totalAmount = edges
+			const totalAvailable = edges
 				.map((edge) => edge.from.isAvailable()
 					? edge.itemAmount.getAvailable()
 					: 0.0)
 				.reduce((acc, sum) => acc + sum, 0);
 
 			console.log(`${indent}  Reduce ingredient (node=${node.id}, item=${ingredient.item}, ` +
-				`inputAmount=${inputAmount}, totalAmount=${totalAmount}, amount=${ingredient.amount}, multiplier=${multiplier})`);
+				`inputAmount=${inputAmount}, totalAvailable=${totalAvailable}, amount=${ingredient.amount}, multiplier=${multiplier})`);
 
-			if (totalAmount <= 0) {
+			if (totalAvailable <= 0) {
 				continue;
 			}
 
@@ -139,12 +139,12 @@ export class CalcCompleted {
 					continue;
 				}
 
-				const edgeAmount = edge.itemAmount.getAmount();
-				const ratio = edgeAmount / totalAmount;
+				const edgeAvailable = edge.itemAmount.getAvailable();
+				const ratio = edgeAvailable / totalAvailable;
 				const relativeEdgeAmount = ratio * inputAmount;
 				const consumed = edge.itemAmount.increaseConsumed(relativeEdgeAmount);
 
-				console.log(`${indent}    Consumed (node=${node.id}, other=${edge.from.id}, edgeAmount=${edgeAmount}, ratio=${ratio}, relativeEdgeAmount=${relativeEdgeAmount}, consumed=${consumed})`);
+				console.log(`${indent}    Consumed (node=${node.id}, other=${edge.from.id}, edgeAvailable=${edgeAvailable}, ratio=${ratio}, relativeEdgeAmount=${relativeEdgeAmount}, consumed=${consumed}, newConsumed=${edge.itemAmount.consumed})`);
 			}
 		}
 

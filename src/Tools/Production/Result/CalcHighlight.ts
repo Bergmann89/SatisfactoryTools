@@ -113,6 +113,8 @@ export class CalcHighlight extends CalcCompleted {
 			return;
 		}
 
+		// console.log(`setNodeLimit(node=${node.id}, recipe=${node.recipeData.recipe.className}, limit=${limit}, diff=${diff})`);
+
 		node.limit = limit;
 
 		const multiplier = node.getMultiplier(diff);
@@ -126,16 +128,23 @@ export class CalcHighlight extends CalcCompleted {
 
 				let inputAmount = ingredient.amount * multiplier;
 
+				// console.log(`  Update inputs(node=${node.id}, item=${input.resource.className}, amount=${ingredient.amount}, multiplier=${multiplier}, inputAmount=${inputAmount})`);
+
 				for (const edge of node.getEdgesIn(input.resource.className)) {
 					if (!edge.from.isAvailable()) {
 						continue;
 					}
 
-					inputAmount -= edge.itemAmount.increaseLimit(inputAmount);
+					const consumed = edge.itemAmount.increaseLimit(inputAmount);
+					inputAmount -= consumed;
 
-					if (edge.from instanceof RecipeNode) {
-						this.updateNodeLimit(edge.from);
-					}
+					// console.log(`    Consumed (node=${node.id}, other=${edge.from.id}, consumed=${consumed})`);
+				}
+			}
+
+			for (const edge of node.getEdgesIn()) {
+				if (edge.from instanceof RecipeNode) {
+					this.updateNodeLimit(edge.from);
 				}
 			}
 		}
@@ -155,10 +164,12 @@ export class CalcHighlight extends CalcCompleted {
 					}
 
 					outputAmount -= edge.itemAmount.increaseLimit(outputAmount);
+				}
+			}
 
-					if (edge.to instanceof RecipeNode) {
-						this.updateNodeLimit(edge.to);
-					}
+			for (const edge of node.getEdgesOut(output.resource.className)) {
+				if (edge.to instanceof RecipeNode) {
+					this.updateNodeLimit(edge.to);
 				}
 			}
 		}
@@ -178,7 +189,7 @@ export class CalcHighlight extends CalcCompleted {
 				const limit = node
 					.getEdgesIn(input.resource.className)
 					.map((edge) => edge.from.isAvailable()
-						? edge.itemAmount.limit || 0
+						? (edge.itemAmount.limit || 0)
 						: edge.itemAmount.amount)
 					.reduce((acc, sum) => acc + sum, 0);
 				const total = input.maxAmount;
@@ -194,7 +205,7 @@ export class CalcHighlight extends CalcCompleted {
 				const limit = node
 					.getEdgesOut(output.resource.className)
 					.map((edge) => edge.to.isAvailable()
-						? edge.itemAmount.limit || 0
+						? (edge.itemAmount.limit || 0)
 						: 0)
 					.reduce((acc, sum) => acc + sum, 0);
 				const total = output.maxAmount;

@@ -23,7 +23,7 @@ export class ItemAmount
 		const buffer = this.getBuffer();
 		const maxDiff = Math.min(buffer, diff);
 
-		this.limit = Numbers.round(this.limit || 0 + maxDiff);
+		this.limit = Numbers.round((this.limit || 0) + maxDiff);
 
 		return maxDiff;
 	}
