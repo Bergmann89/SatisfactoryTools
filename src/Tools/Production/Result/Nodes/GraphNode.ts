@@ -1,11 +1,16 @@
 import {ResourceAmount} from '@src/Tools/Production/Result/ResourceAmount';
 import {GraphEdge} from '@src/Tools/Production/Result/Edges/GraphEdge';
 import {IVisNode} from '@src/Tools/Production/Result/IVisNode';
+import { GraphSettings } from '../Graph';
+
+export type HighlightState = 'highlighted'|'dependency'|'dependent'|'product'|'unrelated';
 
 export abstract class GraphNode
 {
 
 	public id: number;
+	public visible: boolean = true;
+	public highlighted?: HighlightState;
 
 	public connectedEdges: GraphEdge[] = [];
 
@@ -25,6 +30,22 @@ export abstract class GraphNode
 			}
 		}
 		return false;
+	}
+
+	public getEdgesOut(filter?: string): GraphEdge[] {
+		return this.connectedEdges.filter((edge) => edge.from === this && (!filter || edge.itemAmount.item === filter));
+	}
+
+	public getEdgesIn(filter?: string): GraphEdge[] {
+		return this.connectedEdges.filter((edge) => edge.to === this && (!filter || edge.itemAmount.item === filter));
+	}
+
+	public isAvailable(settings: GraphSettings): boolean {
+		return this.highlighted === undefined
+			|| this.highlighted === 'highlighted'
+			|| this.highlighted === 'dependency'
+			|| this.highlighted === 'product'
+			|| (settings.showHighlightDependents && this.highlighted === 'dependent');
 	}
 
 	protected formatText(text: string, bold: boolean = true)

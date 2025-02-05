@@ -904,9 +904,58 @@
 
 		<div ng-show="ctrl.tab.resultTab === 'visualization'">
 			<div class="border-left border-right border-secondary p-2">
-				You can move the nodes around using drag'n'drop.
+				<p>You can move the nodes around using drag'n'drop.</p>
+				<p>Double click a node to highlight it. In highlight mode only elements and dependencies related to this node is shown.</p>
+
+				<table class="visualization-settings">
+					<tr ng-click="ctrl.tab.toggleApplyCompleted()">
+						<td>
+							<span class="fas fa-check-square" ng-show="ctrl.tab.graphSettings.applyCompleted"></span>
+							<span class="fas fa-square" ng-show="!ctrl.tab.graphSettings.applyCompleted"></span>
+						</td>
+						<td class="d-flex justify-content-between">
+							<span>
+								Apply completed recipes.
+							</span>
+						</td>
+					</tr>
+					<tr ng-click="ctrl.tab.toggleShowCompleted()">
+						<td>
+							<span class="fas fa-check-square" ng-show="ctrl.tab.graphSettings.showCompleted"></span>
+							<span class="fas fa-square" ng-show="!ctrl.tab.graphSettings.showCompleted"></span>
+						</td>
+						<td class="d-flex justify-content-between">
+							<span>
+								Show completed nodes.
+							</span>
+						</td>
+					</tr>
+					<tr ng-click="ctrl.tab.toggleHighlightDependents()">
+						<td>
+							<span class="fas fa-check-square" ng-show="ctrl.tab.graphSettings.showHighlightDependents"></span>
+							<span class="fas fa-square" ng-show="!ctrl.tab.graphSettings.showHighlightDependents"></span>
+						</td>
+						<td class="d-flex justify-content-between">
+							<span>
+								Show the dependents of a recipe in highlight mode.
+							</span>
+						</td>
+					</tr>
+					<tr ng-click="ctrl.tab.toggleHighlightLimits()">
+						<td>
+							<span class="fas fa-check-square" ng-show="ctrl.tab.graphSettings.showHighlightLimits"></span>
+							<span class="fas fa-square" ng-show="!ctrl.tab.graphSettings.showHighlightLimits"></span>
+						</td>
+						<td class="d-flex justify-content-between">
+							<span>
+								Show only resources needed for the current selection in highlight mode.
+							</span>
+						</td>
+					</tr>
+				</table>
 			</div>
-			<visualization result="ctrl.tab.resultNew" ng-class="{visualization: 1, loading: ctrl.tab.state.resultLoading}"></visualization>
+
+			<visualization result="ctrl.tab.resultNew" settings="ctrl.tab.graphSettings" ng-class="{visualization: 1, loading: ctrl.tab.state.resultLoading}"></visualization>
 		</div>
 
 		<div ng-show="ctrl.tab.resultTab === 'items'" class="visualization-result">

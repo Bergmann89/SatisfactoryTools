@@ -2,8 +2,14 @@ import {GraphNode} from '@src/Tools/Production/Result/Nodes/GraphNode';
 import {GraphEdge} from '@src/Tools/Production/Result/Edges/GraphEdge';
 import {ItemAmount} from '@src/Tools/Production/Result/ItemAmount';
 import {IProductionDataRequestCompleted} from '@src/Tools/Production/IProductionData';
-import {RecipeNode} from '@src/Tools/Production/Result/Nodes/RecipeNode';
-import {IItemSchema} from '@src/Schema/IItemSchema';
+import { CalcHighlight } from './CalcHighlight';
+
+export interface GraphSettings {
+	applyCompleted: boolean,
+	showCompleted: boolean,
+	showHighlightDependents: boolean,
+	showHighlightLimits: boolean,
+}
 
 export class Graph
 {
@@ -12,10 +18,18 @@ export class Graph
 
 	public nodes: GraphNode[] = [];
 	public edges: GraphEdge[] = [];
+	public completedMap: CompletedMap = { };
+	public highlightedNode?: GraphNode;
 
 	private lastId = 1;
-	private completedMap: CompletedMap = { };
 	private outputToNodeMap?: ItemToNodeMap;
+
+	public constructor(public settings: GraphSettings) { }
+
+	public setSettings(settings: GraphSettings) {
+		this.settings = settings;
+		this.recalculate();
+	}
 
 	public addNode(node: GraphNode): void
 	{
@@ -30,11 +44,23 @@ export class Graph
 		edge.id = this.lastId++;
 	}
 
-	public generateEdges(): void
+	public highlight(node: GraphNode) {
+		new CalcHighlight(this).set(node);
+	}
+
+	public generateEdges(completed: IProductionDataRequestCompleted[]): void
 	{
 		this.edges = [];
+		this.completedMap = { };
 
 		const outputToNodeMap = this.getOutputToNodeMap();
+
+		for (const item of completed) {
+			if (item.recipe) {
+				this.completedMap[item.recipe] = this.completedMap[item.recipe] || 0;
+				this.completedMap[item.recipe] += item.amount;
+			}
+		}
 
 		for (const nodeIn of this.nodes) {
 			for (const input of nodeIn.getInputs()) {
@@ -43,6 +69,10 @@ export class Graph
 					for (const output of nodeOut.getOutputs()) {
 						if (input.resource === output.resource && input.amount < input.maxAmount) {
 							const diff = Math.min(input.maxAmount - input.amount, output.amount);
+
+							if (Math.abs(diff) < this.DELTA) {
+								continue;
+							}
 
 							output.decrease(diff);
 							input.increase(diff);
@@ -53,81 +83,12 @@ export class Graph
 				}
 			}
 		}
+
+		this.recalculate();
 	}
 
-	public applyCompleted(completed: IProductionDataRequestCompleted[]): void {
-		this.completedMap = { };
-		for (const item of completed) {
-			if (item.recipe) {
-				this.completedMap[item.recipe] = this.completedMap[item.recipe] || 0;
-				this.completedMap[item.recipe] += item.amount;
-			}
-		}
-
-		for (const node of this.nodes) {
-			if (node instanceof RecipeNode) {
-				if (this.completedMap[node.recipeData.recipe.className]) {
-					this.updateNodeCompletion(node);
-				}
-			}
-		}
-	}
-
-	private updateNodeCompletion(node: RecipeNode): void {
-		const outputsUsed = node.getOutputs().map((x) => 1.0 - (x.amount / x.maxAmount));
-		const outputUsed = Math.min(...outputsUsed);
-		const outputCompleted = outputUsed * node.recipeData.amount;
-
-		const userCompleted = this.completedMap[node.recipeData.recipe.className] || 0.0;
-
-		const completedTotal = outputCompleted + userCompleted;
-
-		this.setNodeCompleted(node, completedTotal);
-	}
-
-	private setNodeCompleted(node: RecipeNode, completed: number) {
-		const diff = completed - (node.completed || 0);
-		if (diff <= 0) {
-			return;
-		}
-
-		node.completed = completed;
-		const multiplier = node.getMultiplier(diff);
-
-		for (const input of node.getInputs()) {
-			const ingredient = node.recipeData.recipe.ingredients.find((x) => x.item === input.resource.className);
-			if (!ingredient) {
-				continue;
-			}
-
-			let inputAmount = ingredient.amount * multiplier;
-			input.increase(inputAmount);
-
-			const productToNodeMap = this.getOutputToNodeMap();
-			const productNodes = productToNodeMap[input.resource.className] || [];
-			for (const productNode of productNodes) {
-				inputAmount -= this.reduceNodeOutput(productNode, input.resource, inputAmount);
-				if (Math.abs(inputAmount) < this.DELTA) {
-					break;
-				}
-			}
-		}
-	}
-
-	private reduceNodeOutput(node: GraphNode, product: IItemSchema, amount: number): number {
-		const output = node.getOutputs().find((x) => x.resource.className === product.className);
-		if (!output) {
-			return 0.0;
-		}
-
-		const realAmount = Math.min(amount, output.amount);
-		output.amount -= realAmount;
-
-		if (node instanceof RecipeNode) {
-			this.updateNodeCompletion(node);
-		}
-
-		return realAmount;
+	private recalculate() {
+		new CalcHighlight(this).update();
 	}
 
 	private getOutputToNodeMap(): ItemToNodeMap {

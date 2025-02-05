@@ -269,6 +269,12 @@ $border: 1px solid rgba(0, 0, 0, 0.125);
 	}
 }
 
+.visualization-settings {
+	tr {
+		cursor: pointer;
+	}
+}
+
 .alternate-recipe-list {
 	width: 100%;
 

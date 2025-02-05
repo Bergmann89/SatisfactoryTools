@@ -13,6 +13,7 @@ import {ProductionResult} from '@src/Tools/Production/Result/ProductionResult';
 import {ProductionResultFactory} from '@src/Tools/Production/Result/ProductionResultFactory';
 import {DataProvider} from '@src/Data/DataProvider';
 import {IRecipeSchema} from '@src/Schema/IRecipeSchema';
+import { GraphSettings } from './Result/Graph';
 
 export class ProductionTab
 {
@@ -33,6 +34,13 @@ export class ProductionTab
 		powerExpanded: {},
 		itemsExpanded: {},
 		overviewCollapsed: {},
+	};
+
+	public graphSettings: GraphSettings = {
+		applyCompleted: true,
+		showCompleted: true,
+		showHighlightDependents: true,
+		showHighlightLimits: true,
 	};
 
 	public tab: string = 'production';
@@ -164,7 +172,7 @@ export class ProductionTab
 					apiRequest.completed = completed;
 
 					const factory = new ProductionResultFactory;
-					this.resultNew = factory.create(apiRequest, result, DataProvider.get());
+					this.resultNew = factory.create(this.graphSettings, apiRequest, result, DataProvider.get());
 					this.resultStatus = ResultStatus.RESULT;
 				};
 
@@ -471,6 +479,22 @@ export class ProductionTab
 		} else {
 			this.data.request.blockedMachines.splice(index, 1);
 		}
+	}
+
+	public toggleApplyCompleted(): void {
+		this.graphSettings.applyCompleted = !this.graphSettings.applyCompleted;
+	}
+
+	public toggleShowCompleted(): void {
+		this.graphSettings.showCompleted = !this.graphSettings.showCompleted;
+	}
+
+	public toggleHighlightDependents(): void {
+		this.graphSettings.showHighlightDependents = !this.graphSettings.showHighlightDependents;
+	}
+
+	public toggleHighlightLimits(): void {
+		this.graphSettings.showHighlightLimits = !this.graphSettings.showHighlightLimits;
 	}
 
 	public recipeMachineDisabled(recipe: IRecipeSchema): boolean

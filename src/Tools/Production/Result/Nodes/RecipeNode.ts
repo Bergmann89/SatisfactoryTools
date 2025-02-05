@@ -15,7 +15,8 @@ export class RecipeNode extends GraphNode
 	public ingredients: ResourceAmount[] = [];
 	public products: ResourceAmount[] = [];
 	public machineData: MachineGroup;
-	public completed?: number;
+	public completed: number;
+	public limit?: number;
 
 	public constructor(public readonly recipeData: RecipeData, data: IJsonSchema)
 	{
@@ -30,6 +31,12 @@ export class RecipeNode extends GraphNode
 		this.machineData = new MachineGroup(this.recipeData);
 	}
 
+	public getAmount(): number {
+		return this.limit === undefined
+			? this.recipeData.amount
+			: this.limit;
+	}
+
 	public getInputs(): ResourceAmount[]
 	{
 		return this.ingredients;
@@ -42,11 +49,13 @@ export class RecipeNode extends GraphNode
 
 	public getTitle(): string
 	{
-		const completed = this.completed
-			? Strings.formatNumber(this.completed) + ' of '
-			: '';
+		const missing = this.getAmount() - this.completed;
+		const amount = Strings.formatNumber(this.getAmount());
+		const amountText = this.completed
+			? Strings.formatNumber(missing) + ' of ' + amount
+			: amount;
 
-		return this.formatText(this.recipeData.recipe.name) + '\n' + completed + Strings.formatNumber(this.recipeData.amount) + 'x ' + this.recipeData.machine.name;
+		return this.formatText(this.recipeData.recipe.name) + '\n' + amountText + 'x ' + this.recipeData.machine.name;
 	}
 
 	public getTooltip(): string|null
@@ -72,9 +81,38 @@ export class RecipeNode extends GraphNode
 
 	public getVisNode(): IVisNode
 	{
-		const background = Math.abs(this.recipeData.amount - (this.completed || 0)) < this.DELTA
-			? 'rgba(223, 105, 26, 0.25)'
-			: 'rgba(223, 105, 26, 1.0)';
+		const alpha = Math.abs(this.getAmount() - this.completed) < this.DELTA
+			? '0.25'
+			: '1.0';
+
+		const border = this.highlighted === 'highlighted'
+			? 'rgba(80, 160, 80, 1)'
+			: 'rgba(0, 0, 0, 0)';
+
+		const color =
+			this.highlighted === 'dependent' ? {
+				border: 'rgba(0, 0, 0, 0)',
+				background: `rgba(27, 112, 137, ${alpha})`,
+				highlight: {
+					border: 'rgba(238, 238, 238, 1)',
+					background: 'rgba(38, 159, 194, 1)',
+				},
+			} :
+			this.highlighted === 'product' ? {
+				border: 'rgba(0, 0, 0, 0)',
+				background: `rgba(80, 160, 80, ${alpha})`,
+				highlight: {
+					border: 'rgba(238, 238, 238, 1)',
+					background: 'rgba(111, 182, 111, 1)',
+				},
+			} : {
+				border: border,
+				background: `rgba(223, 105, 26, ${alpha})`,
+				highlight: {
+					border: 'rgba(238, 238, 238, 1)',
+					background: 'rgba(231, 122, 49, 1)',
+				},
+			};
 
 		const el = document.createElement('div');
 		el.innerHTML = this.getTooltip() || '';
@@ -82,14 +120,7 @@ export class RecipeNode extends GraphNode
 			id: this.id,
 			label: this.getTitle(),
 			title: el as unknown as string,
-			color: {
-				border: 'rgba(0, 0, 0, 0)',
-				background: background,
-				highlight: {
-					border: 'rgba(238, 238, 238, 1)',
-					background: 'rgba(231, 122, 49, 1)',
-				},
-			},
+			color: color,
 			font: {
 				color: 'rgba(238, 238, 238, 1)',
 			},
