@@ -61,24 +61,31 @@ export class CalcCompleted {
 	}
 
 	private updateNodeCompletion(node: RecipeNode): void {
+		const indent = '   |'.repeat(this.indent)
+		console.log(`${indent}updateNodeCompletion(node=${node.id}, recipe=${node.recipeData.recipe.className})`);
+
 		const outputsUsed = node.getOutputs().map((output) => {
 			let consumed = 0;
 			let total = 0;
 
+			console.log(`${indent}  Consider output (output=${output.resource.className})`);
+
 			for (const edge of node.getEdgesOut(output.resource.className)) {
-				if (!edge.to.isAvailable()) {
-					consumed += edge.itemAmount.getAmount();
-					total += edge.itemAmount.getAmount();
-				} else if (!edge.isLoop()) {
+				if (edge.to.isAvailable() && !edge.isLoop()) {
+					console.log(`${indent}    Apply output (node=${edge.to.id}, consumed=${edge.itemAmount.consumed}, amount=${edge.itemAmount.getAmount()})`);
+
 					consumed += edge.itemAmount.consumed;
 					total += edge.itemAmount.getAmount();
 				}
 			}
 
+			console.log(`${indent}  Done (total=${total}, consumed=${consumed})`);
+
 			return total === 0
 				? 1.0
 				: consumed / total;
 		});
+
 		const outputUsed = Math.min(...outputsUsed);
 		const outputCompleted = outputUsed * node.getAmount();
 
@@ -86,23 +93,27 @@ export class CalcCompleted {
 
 		const completedTotal = Math.min(outputCompleted + userCompleted, node.getAmount());
 
+		console.log(`${indent}Consumed values(node=${node.id}, outputUsed=${outputUsed}, outputCompleted=${outputCompleted}, userCompleted=${userCompleted}, completedTotal=${completedTotal})`);
+
 		this.setNodeCompleted(node, completedTotal);
 	}
 
 	private setNodeCompleted(node: RecipeNode, completed: number) {
 		const diff = completed - node.completed;
+		const percentage = 100.0 * diff / node.getAmount();
 
 		const indent = '   |'.repeat(this.indent)
-		console.log(`${indent}setNodeCompleted(node=${node.id}, recipe=${node.recipeData.recipe.className}, completed=${completed}, diff=${diff})`);
+		console.log(`${indent}setNodeCompleted(node=${node.id}, recipe=${node.recipeData.recipe.className}, completed=${completed}, amount=${node.getAmount()}, diff=${diff}, percentage=${percentage}, speed=${node.recipeData.machine.metadata.manufacturingSpeed}, time=${node.recipeData.recipe.time})`);
 
 		if (Numbers.floor(diff) <= 0) {
 			return;
 		}
 
 		node.completed = completed;
+		const inputs = node.getInputs();
 		const multiplier = node.getMultiplier(diff);
 
-		for (const input of node.getInputs()) {
+		for (const input of inputs) {
 			const ingredient = node.recipeData.recipe.ingredients.find((x) => x.item === input.resource.className);
 			if (!ingredient) {
 				continue;
@@ -111,7 +122,7 @@ export class CalcCompleted {
 			const edges = node.getEdgesIn(input.resource.className);
 			const inputAmount = ingredient.amount * multiplier;
 			const totalAmount = edges
-				.map((edge) => edge.from.isAvailable() && !edge.isLoop()
+				.map((edge) => edge.from.isAvailable()
 					? edge.itemAmount.getAvailable()
 					: 0.0)
 				.reduce((acc, sum) => acc + sum, 0);
@@ -124,7 +135,7 @@ export class CalcCompleted {
 			}
 
 			for (const edge of edges) {
-				if (!edge.from.isAvailable() || edge.isLoop()) {
+				if (!edge.from.isAvailable()) {
 					continue;
 				}
 
@@ -135,18 +146,18 @@ export class CalcCompleted {
 
 				console.log(`${indent}    Consumed (node=${node.id}, other=${edge.from.id}, edgeAmount=${edgeAmount}, ratio=${ratio}, relativeEdgeAmount=${relativeEdgeAmount}, consumed=${consumed})`);
 			}
+		}
 
-			console.log(`${indent}  Update dependencies (node=${node.id})`);
+		console.log(`${indent}  Update dependencies (node=${node.id})`);
 
-			for (const edge of edges) {
-				if (	edge.from.isAvailable()
-					&&  edge.to !== edge.from
-					&& 	edge.from instanceof RecipeNode)
-				{
-					this.indent += 1;
-					this.updateNodeCompletion(edge.from);
-					this.indent -= 1;
-				}
+		for (const edge of node.getEdgesIn()) {
+			if (	edge.from.isAvailable()
+				&&  edge.to !== edge.from
+				&& 	edge.from instanceof RecipeNode)
+			{
+				this.indent += 1;
+				this.updateNodeCompletion(edge.from);
+				this.indent -= 1;
 			}
 		}
 	}
