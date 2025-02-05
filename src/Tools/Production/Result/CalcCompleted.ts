@@ -1,3 +1,4 @@
+import { Numbers } from '@src/Utils/Numbers';
 import { Graph } from './Graph';
 import { ByproductNode } from './Nodes/ByproductNode';
 import { ProductNode } from './Nodes/ProductNode';
@@ -41,17 +42,19 @@ export class CalcCompleted {
 
 	protected updateVisibility() {
 		for (const node of this.graph.nodes) {
-			const output = node.getEdgesOut().map((x) => x.itemAmount.getAvailable()).reduce((acc, sum) => acc + sum, 0);
+			const output = Numbers.round(node
+				.getEdgesOut()
+				.map((x) => x.itemAmount.getAvailable())
+				.reduce((acc, sum) => acc + sum, 0));
 
-			node.visible = (
-				this.graph.settings.showCompleted
-					|| output > this.graph.DELTA
+			node.visible = node.isAvailable()
+				&& (this.graph.settings.showCompleted
+					|| output > 0
 					|| node instanceof ProductNode
 					|| node instanceof SinkNode
 					|| node instanceof ByproductNode
 					|| node.highlighted === 'product'
-					|| node.highlighted === 'dependent')
-				&& (node.isAvailable(this.graph.settings));
+					|| node.highlighted === 'dependent');
 		}
 	}
 
@@ -61,7 +64,7 @@ export class CalcCompleted {
 			let total = 0;
 
 			for (const edge of node.getEdgesOut(output.resource.className)) {
-				consumed += !edge.to.isAvailable(this.graph.settings)
+				consumed += !edge.to.isAvailable()
 								|| edge.to.hasOutputTo(edge.from)
 					? edge.itemAmount.getAmount()
 					: edge.itemAmount.consumed;
@@ -84,11 +87,11 @@ export class CalcCompleted {
 
 	private setNodeCompleted(node: RecipeNode, completed: number) {
 		const diff = completed - node.completed;
-		if (diff <= 0) {
+		if (Numbers.round(diff) <= 0) {
 			return;
 		}
 
-		console.log(`setNodeCompleted(node=${node.id}, recipe=${node.recipeData.recipe}, completed=${completed}, diff=${diff})`);
+		console.log(`setNodeCompleted(node=${node.id}, recipe=${node.recipeData.recipe.className}, completed=${completed}, diff=${diff})`);
 
 		node.completed = completed;
 		const multiplier = node.getMultiplier(diff);
@@ -101,8 +104,10 @@ export class CalcCompleted {
 
 			let inputAmount = ingredient.amount * multiplier;
 
+			console.log(`    Reduce ingredient (inputAmount=${inputAmount}, amount=${ingredient.amount}, multiplier=${multiplier})`);
+
 			for (const edge of node.getEdgesIn(input.resource.className)) {
-				if (   !edge.from.isAvailable(this.graph.settings)
+				if (   !edge.from.isAvailable()
 					||  edge.to.hasOutputTo(edge.from)) {
 					continue;
 				}
@@ -113,23 +118,23 @@ export class CalcCompleted {
 					this.updateNodeCompletion(edge.from);
 				}
 
-				if (Math.abs(inputAmount) < this.graph.DELTA) {
+				if (Numbers.round(inputAmount) <= 0) {
 					break;
 				}
 			}
 
 			for (const edge of node.getEdgesIn(input.resource.className)) {
-				if (edge.from.isAvailable(this.graph.settings)) {
+				if (edge.from.isAvailable()) {
 					continue;
 				}
 
-				inputAmount -= edge.itemAmount.increaseConsumed(inputAmount);
+				inputAmount -= inputAmount - edge.itemAmount.increaseConsumed(inputAmount);
 
 				if (edge.from instanceof RecipeNode) {
 					this.updateNodeCompletion(edge.from);
 				}
 
-				if (Math.abs(inputAmount) < this.graph.DELTA) {
+				if (Numbers.round(inputAmount) <= 0) {
 					break;
 				}
 			}

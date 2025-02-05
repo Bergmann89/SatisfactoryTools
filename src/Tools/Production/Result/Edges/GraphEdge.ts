@@ -21,7 +21,9 @@ export class GraphEdge
 			? Strings.formatNumber(missing) + ' of ' + amount
 			: amount;
 
-		return model.getItem(this.itemAmount.item).prototype.name + '\n' + amountText + ' / min'
+		const extra = `\namount=${this.itemAmount.amount}\nconsumed=${this.itemAmount.consumed}\nlimit=${this.itemAmount.limit}`
+
+		return model.getItem(this.itemAmount.item).prototype.name + '\n' + amountText + ' / min' + extra;
 	}
 
 }

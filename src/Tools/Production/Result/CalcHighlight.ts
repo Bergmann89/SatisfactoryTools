@@ -1,3 +1,4 @@
+import { Numbers } from '@src/Utils/Numbers';
 import { CalcCompleted } from './CalcCompleted';
 import { GraphNode, HighlightState } from './Nodes/GraphNode';
 import { RecipeNode } from './Nodes/RecipeNode';
@@ -77,14 +78,16 @@ export class CalcHighlight extends CalcCompleted {
 				if (edge.to.highlighted === 'unrelated') {
 					const oldState = this.cache[edge.to.id]?.highlighted;
 
-					edge.to.highlighted =
-						node.highlighted === 'highlighted'
+					if (node.highlighted === 'highlighted'
 						&& (oldState === undefined
 							|| oldState === 'dependency'
 							|| oldState === 'highlighted'
-							|| oldState === 'product')
-						? 'product'
-						: 'dependent';
+							|| oldState === 'product'))
+					{
+						edge.to.highlighted = 'product';
+					} else if (this.graph.settings.showHighlightDependents) {
+						edge.to.highlighted = 'dependent';
+					}
 				}
 
 				this.setHighlighted(edge.to, false, false);
@@ -106,7 +109,7 @@ export class CalcHighlight extends CalcCompleted {
 
 	private setNodeLimit(node: RecipeNode, limit: number): void {
 		const diff = limit - (node.limit || 0);
-		if (Math.abs(diff) <= this.graph.DELTA) {
+		if (Numbers.round(diff) <= 0) {
 			return;
 		}
 
@@ -124,7 +127,7 @@ export class CalcHighlight extends CalcCompleted {
 				let inputAmount = ingredient.amount * multiplier;
 
 				for (const edge of node.getEdgesIn(input.resource.className)) {
-					if (!edge.from.isAvailable(this.graph.settings)) {
+					if (!edge.from.isAvailable()) {
 						continue;
 					}
 
@@ -147,7 +150,7 @@ export class CalcHighlight extends CalcCompleted {
 				let outputAmount = product.amount * multiplier;
 
 				for (const edge of node.getEdgesOut(output.resource.className)) {
-					if (!edge.to.isAvailable(this.graph.settings)) {
+					if (!edge.to.isAvailable()) {
 						continue;
 					}
 
@@ -174,7 +177,7 @@ export class CalcHighlight extends CalcCompleted {
 			const inputsUsed = node.getInputs().map((input) => {
 				const limit = node
 					.getEdgesIn(input.resource.className)
-					.map((edge) => edge.from.isAvailable(this.graph.settings)
+					.map((edge) => edge.from.isAvailable()
 						? edge.itemAmount.limit || 0
 						: edge.itemAmount.amount)
 					.reduce((acc, sum) => acc + sum, 0);
@@ -190,7 +193,7 @@ export class CalcHighlight extends CalcCompleted {
 			const outputsUsed = node.getOutputs().map((output) => {
 				const limit = node
 					.getEdgesOut(output.resource.className)
-					.map((edge) => edge.to.isAvailable(this.graph.settings)
+					.map((edge) => edge.to.isAvailable()
 						? edge.itemAmount.limit || 0
 						: 0)
 					.reduce((acc, sum) => acc + sum, 0);

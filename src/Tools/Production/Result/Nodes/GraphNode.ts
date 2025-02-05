@@ -40,12 +40,8 @@ export abstract class GraphNode
 		return this.connectedEdges.filter((edge) => edge.to === this && (!filter || edge.itemAmount.item === filter));
 	}
 
-	public isAvailable(settings: GraphSettings): boolean {
-		return this.highlighted === undefined
-			|| this.highlighted === 'highlighted'
-			|| this.highlighted === 'dependency'
-			|| this.highlighted === 'product'
-			|| (settings.showHighlightDependents && this.highlighted === 'dependent');
+	public isAvailable(): boolean {
+		return this.highlighted !== 'unrelated';
 	}
 
 	protected formatText(text: string, bold: boolean = true)

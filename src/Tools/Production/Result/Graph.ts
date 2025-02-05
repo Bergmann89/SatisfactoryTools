@@ -3,6 +3,7 @@ import {GraphEdge} from '@src/Tools/Production/Result/Edges/GraphEdge';
 import {ItemAmount} from '@src/Tools/Production/Result/ItemAmount';
 import {IProductionDataRequestCompleted} from '@src/Tools/Production/IProductionData';
 import { CalcHighlight } from './CalcHighlight';
+import { Numbers } from '@src/Utils/Numbers';
 
 export interface GraphSettings {
 	applyCompleted: boolean,
@@ -13,8 +14,6 @@ export interface GraphSettings {
 
 export class Graph
 {
-
-	public readonly DELTA = 1e-8;
 
 	public nodes: GraphNode[] = [];
 	public edges: GraphEdge[] = [];
@@ -57,8 +56,7 @@ export class Graph
 
 		for (const item of completed) {
 			if (item.recipe) {
-				this.completedMap[item.recipe] = this.completedMap[item.recipe] || 0;
-				this.completedMap[item.recipe] += item.amount;
+				this.completedMap[item.recipe] = (this.completedMap[item.recipe] || 0) + item.amount;
 			}
 		}
 
@@ -68,9 +66,9 @@ export class Graph
 				for (const nodeOut of nodesOut) {
 					for (const output of nodeOut.getOutputs()) {
 						if (input.resource === output.resource && input.amount < input.maxAmount) {
-							const diff = Math.min(input.maxAmount - input.amount, output.amount);
+							const diff = Numbers.round(Math.min(input.maxAmount - input.amount, output.amount));
 
-							if (Math.abs(diff) < this.DELTA) {
+							if (Numbers.round(diff) <= 0) {
 								continue;
 							}
 

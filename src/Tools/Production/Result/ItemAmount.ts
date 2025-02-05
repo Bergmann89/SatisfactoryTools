@@ -1,3 +1,5 @@
+import { Numbers } from '@src/Utils/Numbers';
+
 export class ItemAmount
 {
 
@@ -10,36 +12,20 @@ export class ItemAmount
 
 	public increaseConsumed(diff: number): number {
 		const available = this.getAvailable();
-		if (diff < available) {
-			this.consumed += diff;
+		const maxDiff = Math.min(available, diff);
 
-			return 0;
-		} else if (diff > available) {
-			this.consumed = this.amount;
+		this.consumed = Numbers.round(this.consumed + maxDiff);
 
-			return available;
-		} else {
-			this.consumed += diff;
-
-			return diff;
-		}
+		return Numbers.round(diff - maxDiff);
 	}
 
 	public increaseLimit(diff: number): number {
 		const buffer = this.getBuffer();
-		if (diff < buffer) {
-			this.limit = (this.limit || 0) + diff;
+		const maxDiff = Math.min(buffer, diff);
 
-			return 0;
-		} else if (diff > buffer) {
-			this.limit = buffer;
+		this.limit = Numbers.round(this.limit || 0 + maxDiff);
 
-			return buffer;
-		} else {
-			this.limit = (this.limit || 0) + diff;
-
-			return diff;
-		}
+		return Numbers.round(diff - maxDiff);
 	}
 
 	public getConsumed(): number {
@@ -47,11 +33,11 @@ export class ItemAmount
 	}
 
 	public getAvailable(): number {
-		return this.getAmount() - this.consumed;
+		return Numbers.round(this.getAmount() - this.consumed);
 	}
 
 	public getBuffer(): number {
-		return this.amount - (this.limit || 0);
+		return Numbers.round(this.amount - (this.limit || 0));
 	}
 
 	public getAmount(): number {
