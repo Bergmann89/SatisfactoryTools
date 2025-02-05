@@ -60,22 +60,28 @@ export class Graph
 			}
 		}
 
-		for (const nodeIn of this.nodes) {
-			for (const input of nodeIn.getInputs()) {
-				const nodesOut = outputToNodeMap[input.resource.className];
-				for (const nodeOut of nodesOut) {
-					for (const output of nodeOut.getOutputs()) {
-						if (input.resource === output.resource && input.amount < input.maxAmount) {
-							const diff = Numbers.round(Math.min(input.maxAmount - input.amount, output.amount));
+		for (const checkSharedResources of [true, false]) {
+			for (const nodeIn of this.nodes) {
+				for (const input of nodeIn.getInputs()) {
+					const nodesOut = outputToNodeMap[input.resource.className];
+					for (const nodeOut of nodesOut) {
+						if (checkSharedResources && !hasSharedResources(nodeIn, nodeOut)) {
+							continue;
+						}
 
-							if (diff <= 0) {
-								continue;
+						for (const output of nodeOut.getOutputs()) {
+							if (input.resource === output.resource && input.amount < input.maxAmount) {
+								const diff = Numbers.round(Math.min(input.maxAmount - input.amount, output.amount));
+
+								if (diff <= 0) {
+									continue;
+								}
+
+								output.decrease(diff);
+								input.increase(diff);
+
+								this.addEdge(new GraphEdge(nodeOut, nodeIn, new ItemAmount(output.resource.className, diff)));
 							}
-
-							output.decrease(diff);
-							input.increase(diff);
-
-							this.addEdge(new GraphEdge(nodeOut, nodeIn, new ItemAmount(output.resource.className, diff)));
 						}
 					}
 				}
@@ -106,6 +112,29 @@ export class Graph
 		return this.outputToNodeMap;
 	}
 
+}
+
+function hasSharedResources(nodeIn: GraphNode, nodeOut: GraphNode): boolean {
+	let sharedInputs = 0;
+	let sharedOutputs = 0;
+
+	for (const input of nodeIn.getInputs()) {
+		for (const output of nodeOut.getOutputs()) {
+			if (input.resource === output.resource) {
+				++sharedInputs;
+			}
+		}
+	}
+
+	for (const output of nodeIn.getOutputs()) {
+		for (const input of nodeOut.getInputs()) {
+			if (input.resource === output.resource) {
+				++sharedOutputs;
+			}
+		}
+	}
+
+	return (sharedInputs > 0) && (sharedOutputs > 0);
 }
 
 interface ItemToNodeMap { [key:string]: GraphNode[] }

@@ -22,10 +22,10 @@ export abstract class GraphNode
 
 	public abstract getVisNode(): IVisNode;
 
-	public hasOutputTo(target: GraphNode): boolean
+	public hasOutputTo(target: GraphNode, filter?: string): boolean
 	{
 		for (const edge of this.connectedEdges) {
-			if (edge.from === this && edge.to === target) {
+			if (edge.from === this && edge.to === target && (!filter || edge.itemAmount.item === filter)) {
 				return true;
 			}
 		}
